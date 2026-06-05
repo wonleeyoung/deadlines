@@ -3,32 +3,32 @@
    ============================================================ */
 
 const CATEGORY_ORDER = [
-  "Real-Time & Embedded",
-  "Mobile & Sensing",
-  "Systems",
-  "Machine Learning",
-  "Computer Vision",
-  "Robotics",
-  "Personal",
+  "AI / ML", "Systems / Architecture", "Networking / Mobile", "Security",
+  "Database / Data Mining", "Software Eng / PL", "Theory", "HCI",
+  "Graphics / Multimedia", "Real-Time & Embedded", "Robotics",
+  "Interdisciplinary", "Personal",
 ];
 
 const CATEGORY_COLOR = {
-  "Real-Time & Embedded": "#d0682f",
-  "Mobile & Sensing":     "#2f8fd0",
-  "Systems":              "#8a5cd0",
-  "Machine Learning":     "#2fb0a0",
-  "Computer Vision":      "#c0497a",
-  "Robotics":             "#5a9e3a",
-  "Personal":             "#c79a2f",
+  "AI / ML": "#13a89e",
+  "Systems / Architecture": "#8257d6",
+  "Networking / Mobile": "#2f8fd0",
+  "Security": "#d8463d",
+  "Database / Data Mining": "#c7902a",
+  "Software Eng / PL": "#4a9e3a",
+  "Theory": "#6366d8",
+  "HCI": "#c84f93",
+  "Graphics / Multimedia": "#e07b2a",
+  "Real-Time & Embedded": "#b85c3c",
+  "Robotics": "#7f8c2a",
+  "Interdisciplinary": "#888890",
+  "Personal": "#2aa0c0",
 };
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const DAY = 86400000;
 
 /* ---------- date helpers ---------- */
-// Read the calendar parts straight from the ISO string so the displayed
-// date is the *official* one (e.g. "Sep 24, AoE"), not shifted into the
-// viewer's local timezone. The countdown below stays timezone-exact.
 function isoParts(iso) {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   return { y: +m[1], mo: +m[2], d: +m[3], hh: +m[4], mm: +m[5] };
@@ -39,13 +39,14 @@ function fmtDate(iso) {
 }
 function ts(iso) { return new Date(iso).getTime(); }
 
-// The next sub-deadline you must hit: the abstract if it's still ahead,
-// otherwise the paper deadline.
+function isTBD(e) { return !e.paper; }
+function isPassed(e) { return e.paper && ts(e.paper) < Date.now(); }
+
+// next sub-deadline to hit: abstract if still ahead, else the paper deadline
 function targetOf(e) {
   if (e.abstract && ts(e.abstract) > Date.now()) return { iso: e.abstract, label: "abstract" };
   return { iso: e.paper, label: "paper" };
 }
-function isPassed(e) { return ts(e.paper) < Date.now(); }
 function daysLeft(iso) { return Math.ceil((ts(iso) - Date.now()) / DAY); }
 
 function ddClass(d) {
@@ -75,7 +76,10 @@ function gcalLink(e, t) {
 }
 
 /* ---------- state ---------- */
-const state = { query: "", cats: new Set(), showPassed: false };
+const state = { query: "", cats: new Set(), showPassed: false, bkMode: false };
+
+/* an entry is in scope when it's curated top-tier, personal, or BK mode is on */
+function inScope(e) { return e.topTier || e.category === "Personal" || state.bkMode; }
 
 /* ---------- rendering ---------- */
 function escapeHTML(s) {
@@ -84,46 +88,55 @@ function escapeHTML(s) {
 }
 
 function cardHTML(e) {
-  const t = targetOf(e);
-  const passed = isPassed(e);
+  const tbd = isTBD(e), passed = isPassed(e);
   const color = CATEGORY_COLOR[e.category] || "var(--muted)";
 
   let ddInner, ddCls;
-  if (passed) {
-    ddCls = "dd-passed";
-    ddInner = `<span class="num">ended</span>`;
+  if (tbd) {
+    ddCls = "dd-tbd"; ddInner = `<span class="num">TBD</span>`;
+  } else if (passed) {
+    ddCls = "dd-passed"; ddInner = `<span class="num">ended</span>`;
   } else {
-    const d = daysLeft(t.iso);
+    const t = targetOf(e), d = daysLeft(t.iso);
     ddCls = ddClass(d);
     ddInner = `<span class="num">${d <= 0 ? "D-DAY" : "D-" + d}</span>`
             + `<span class="dday-label">to ${t.label}</span>`;
   }
 
-  // abstract / paper line
-  let dates = `<strong>Paper</strong> ${fmtDate(e.paper)}`;
-  if (e.abstract) {
-    const aPassed = ts(e.abstract) < Date.now();
-    dates += `<span class="dot-sep">·</span><span class="${aPassed ? "sub-passed" : ""}">Abstract ${fmtDate(e.abstract)}</span>`;
-  }
-  dates += `<span class="dot-sep">·</span><span class="tz">${escapeHTML(e.tz)}</span>`;
+  const bk = e.bk != null
+    ? `<span class="bk-badge bk-${e.bk}" title="BK21플러스 CS IF ${e.bk} / 4">BK ${e.bk}</span>` : "";
+  const kiise = e.kiise
+    ? `<span class="kiise-badge ${e.kiise === "최우수" ? "k-top" : "k-good"}" title="한국정보과학회 등급">${escapeHTML(e.kiise)}</span>` : "";
+  const est = (e.estimated && !tbd)
+    ? `<span class="est-badge" title="Estimated from previous years — confirm on the official site.">~est</span>` : "";
 
-  const est = e.estimated
-    ? `<span class="est-badge" title="Estimated from previous years — confirm on the official site.">~est</span>`
-    : "";
+  // dates line
+  let dates;
+  if (tbd) {
+    dates = `<span class="tbd-text">Deadline not announced</span>`;
+  } else {
+    dates = `<strong>Paper</strong> ${fmtDate(e.paper)}`;
+    if (e.abstract) {
+      const aPassed = ts(e.abstract) < Date.now();
+      dates += `<span class="dot-sep">·</span><span class="${aPassed ? "sub-passed" : ""}">Abstract ${fmtDate(e.abstract)}</span>`;
+    }
+    if (e.tz) dates += `<span class="dot-sep">·</span><span class="tz">${escapeHTML(e.tz)}</span>`;
+  }
 
   const links = [];
-  if (e.link) links.push(`<a href="${escapeHTML(e.link)}" target="_blank" rel="noopener">CFP ↗</a>`);
-  if (!passed) links.push(`<a href="${gcalLink(e, t)}" target="_blank" rel="noopener">+ Calendar</a>`);
+  if (e.link) links.push(`<a href="${escapeHTML(e.link)}" target="_blank" rel="noopener">${tbd ? "DBLP ↗" : "CFP ↗"}</a>`);
+  if (!passed && !tbd) links.push(`<a href="${gcalLink(e, targetOf(e))}" target="_blank" rel="noopener">+ Calendar</a>`);
 
   const sub = [];
   if (e.where) sub.push(`📍 ${escapeHTML(e.where)}`);
   if (e.when) sub.push(`🗓 ${escapeHTML(e.when)}`);
 
-  return `<article class="card ${passed ? "passed" : ""}" style="--cat:${color}">
+  return `<article class="card ${passed ? "passed" : ""} ${tbd ? "tbd" : ""}" style="--cat:${color}">
     <div class="dday ${ddCls}">${ddInner}</div>
     <div class="card-body">
       <div class="card-top">
         <h3 class="card-name">${escapeHTML(e.name)}</h3>
+        ${bk}${kiise}
         <span class="cat-tag" style="--cat:${color}">${escapeHTML(e.category)}</span>
         ${est}
       </div>
@@ -139,21 +152,25 @@ function cardHTML(e) {
 }
 
 function passesFilter(e) {
+  if (!inScope(e)) return false;
   if (state.cats.size && !state.cats.has(e.category)) return false;
   if (!state.showPassed && isPassed(e)) return false;
   if (state.query) {
     const q = state.query.toLowerCase();
-    const hay = (e.name + " " + e.full + " " + (e.where || "")).toLowerCase();
+    const hay = (e.name + " " + e.full + " " + e.category + " " + (e.where || "")).toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;
 }
 
+// rank: 0 = upcoming dated, 1 = TBD, 2 = passed
+function rankOf(e) { return isTBD(e) ? 1 : (isPassed(e) ? 2 : 0); }
 function sortDeadlines(a, b) {
-  const pa = isPassed(a), pb = isPassed(b);
-  if (pa !== pb) return pa ? 1 : -1;            // passed sink to the bottom
-  if (pa) return ts(b.paper) - ts(a.paper);     // most-recently-passed first
-  return ts(targetOf(a).iso) - ts(targetOf(b).iso); // soonest first
+  const ra = rankOf(a), rb = rankOf(b);
+  if (ra !== rb) return ra - rb;
+  if (ra === 0) return ts(targetOf(a).iso) - ts(targetOf(b).iso);   // soonest first
+  if (ra === 1) return (b.bk || 0) - (a.bk || 0) || a.name.localeCompare(b.name); // TBD: by BK
+  return ts(b.paper) - ts(a.paper);                                  // passed: most recent first
 }
 
 function render() {
@@ -162,30 +179,36 @@ function render() {
   const summary = document.getElementById("summary");
 
   if (!items.length) {
-    list.innerHTML = `<p class="empty">No deadlines match. Try clearing filters or showing passed ones.</p>`;
+    list.innerHTML = `<p class="empty">No deadlines match. Try clearing filters or toggling “BK 학회 전체”.</p>`;
     summary.textContent = "";
     return;
   }
-
   list.innerHTML = items.map(cardHTML).join("");
 
-  const upcoming = items.filter((e) => !isPassed(e));
+  const upcoming = items.filter((e) => !isPassed(e) && !isTBD(e));
+  const scopeNote = state.bkMode ? `BK21 CS IF ≥ 1` : `top-tier`;
   if (upcoming.length) {
-    const next = upcoming[0];
-    const d = daysLeft(targetOf(next).iso);
-    summary.innerHTML = `Showing <strong>${upcoming.length}</strong> upcoming · next: `
-      + `<strong>${escapeHTML(next.name)}</strong> in <strong>${d <= 0 ? "D-DAY" : "D-" + d}</strong>`;
+    const next = upcoming[0], d = daysLeft(targetOf(next).iso);
+    summary.innerHTML = `<strong>${items.length}</strong> shown (${scopeNote}) · `
+      + `next: <strong>${escapeHTML(next.name)}</strong> in <strong>${d <= 0 ? "D-DAY" : "D-" + d}</strong>`;
   } else {
-    summary.innerHTML = `<strong>${items.length}</strong> passed deadline(s).`;
+    summary.innerHTML = `<strong>${items.length}</strong> shown (${scopeNote})`;
   }
 }
 
-/* ---------- build the filter chips ---------- */
+/* ---------- filter chips (scoped to what's currently shown) ---------- */
+function presentCategories() {
+  const s = new Set(DEADLINES.filter(inScope).map((e) => e.category));
+  return CATEGORY_ORDER.filter((c) => s.has(c));
+}
 function buildChips() {
-  const present = CATEGORY_ORDER.filter((c) => DEADLINES.some((e) => e.category === c));
+  const present = presentCategories();
+  // drop any active filters that are no longer available
+  state.cats.forEach((c) => { if (!present.includes(c)) state.cats.delete(c); });
+
   const wrap = document.getElementById("chips");
   wrap.innerHTML = present.map((c) =>
-    `<button class="chip" data-cat="${escapeHTML(c)}" style="--chip-color:${CATEGORY_COLOR[c]}">`
+    `<button class="chip ${state.cats.has(c) ? "active" : ""}" data-cat="${escapeHTML(c)}" style="--chip-color:${CATEGORY_COLOR[c]}">`
     + `<span class="dot"></span>${escapeHTML(c)}</button>`).join("");
 
   wrap.querySelectorAll(".chip").forEach((btn) => {
@@ -210,8 +233,14 @@ function init() {
     state.showPassed = e.target.checked;
     render();
   });
+  document.getElementById("bk-toggle").addEventListener("click", (e) => {
+    state.bkMode = !state.bkMode;
+    e.currentTarget.classList.toggle("active", state.bkMode);
+    e.currentTarget.setAttribute("aria-pressed", String(state.bkMode));
+    buildChips();   // category set changes with scope
+    render();
+  });
 
-  // theme toggle (same behavior as the CV site)
   document.getElementById("theme-toggle").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme");
     const next = cur === "dark" ? "light" : "dark";
@@ -220,8 +249,7 @@ function init() {
   });
 
   render();
-  // keep the countdown fresh if the page is left open
-  setInterval(render, 60000);
+  setInterval(render, 60000);  // keep countdowns fresh
 }
 
 document.addEventListener("DOMContentLoaded", init);

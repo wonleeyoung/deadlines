@@ -35,12 +35,16 @@
     <header class="page-head">
       <h1>Paper Deadlines</h1>
       <p class="sub">
-        Top-tier CS conferences — real-time, embedded, mobile, systems, ML &amp; vision — counting down.
+        Top-tier CS conference deadlines, counting down. Flip on
+        <strong>BK 학회 전체</strong> for every KIISE / BK21-rated venue (BK21 CS IF ≥ 1).
         <a href="https://wonleeyoung.github.io/">← back to CV</a>
       </p>
     </header>
 
     <div class="controls">
+      <button id="bk-toggle" class="bk-toggle" aria-pressed="false" title="Show all BK21 CS IF ≥ 1 conferences with their BK score and KIISE grade">
+        BK 학회 전체 보기
+      </button>
       <input id="search" class="search" type="search" placeholder="Search conference, topic, or place…" aria-label="Search deadlines" />
       <label class="toggle">
         <input id="show-passed" type="checkbox" />
@@ -56,8 +60,14 @@
 
     <footer>
       <p>
-        Conference data researched Jun 2026 · entries marked <span style="color:var(--soon)">~est</span> are
-        estimated from previous years — always confirm on the official CFP.
+        Deadlines from <a href="https://ccfddl.com/" target="_blank" rel="noopener">ccfddl</a> ·
+        BK21 CS IF &amp; 한국정보과학회 grades from
+        <a href="https://gist.github.com/Pusnow/6eb933355b5cb8d31ef1abcb3c3e1206" target="_blank" rel="noopener">Pusnow’s list</a> ·
+        researched Jun 2026.
+      </p>
+      <p>
+        Entries marked <span style="color:var(--soon)">~est</span> are estimated from previous years and
+        <span style="color:var(--muted)">TBD</span> ones aren’t announced yet — always confirm on the official CFP.
       </p>
       <p>Built with plain HTML/CSS/JS · Hosted on GitHub Pages · <a href="https://wonleeyoung.github.io/">wonleeyoung.github.io</a></p>
     </footer>

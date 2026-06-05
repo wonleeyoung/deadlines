@@ -121,6 +121,24 @@ a:hover { text-decoration: underline; }
 }
 .toggle input { cursor: pointer; }
 
+/* BK mode toggle */
+.bk-toggle {
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.bk-toggle:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.bk-toggle.active { background: var(--accent); color: #fff; }
+[data-theme="dark"] .bk-toggle.active { color: #16181d; }
+
 /* ---------- Category chips ---------- */
 .chips {
   display: flex;
@@ -199,6 +217,7 @@ a:hover { text-decoration: underline; }
 .dd-ok    .num { color: var(--ok); }
 .dd-far   .num { color: var(--far); }
 .dd-passed .num { color: var(--muted); font-size: 1rem; font-weight: 600; padding-top: 6px; }
+.dd-tbd .num { color: var(--muted); font-size: 1rem; font-weight: 600; padding-top: 6px; }
 
 /* Card body */
 .card-body { min-width: 0; }
@@ -227,6 +246,43 @@ a:hover { text-decoration: underline; }
   padding: 1px 6px;
   cursor: help;
 }
+
+/* BK21 score + KIISE grade badges */
+.bk-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 5px;
+  color: #fff;
+  letter-spacing: 0.02em;
+  cursor: help;
+}
+.bk-4 { background: #c79a2f; }
+.bk-3 { background: #cf7d3a; }
+.bk-2 { background: #3f7fc0; }
+.bk-1 { background: #9a9aa2; }
+.kiise-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: help;
+}
+.kiise-badge.k-top {
+  color: #a9780a;
+  background: color-mix(in srgb, #d4a017 16%, transparent);
+  border-color: color-mix(in srgb, #d4a017 42%, transparent);
+}
+.kiise-badge.k-good {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--muted) 32%, transparent);
+}
+[data-theme="dark"] .kiise-badge.k-top { color: #e6bf52; }
+
+.card.tbd { opacity: 0.82; }
+.tbd-text { color: var(--muted); font-style: italic; }
 
 .card-full { margin: 3px 0 7px; color: var(--muted); font-size: 0.88rem; }
 
