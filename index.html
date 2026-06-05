@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paper Deadlines — Wonyeong Lee</title>
+  <meta name="description" content="Countdown to top-tier CS conference paper deadlines — real-time, embedded, mobile, on-device ML, and more." />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Paper Deadlines — Wonyeong Lee" />
+  <meta property="og:description" content="Countdown to top-tier CS conference paper deadlines." />
+
+  <!-- Emoji favicon, no extra file needed -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>" />
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Set theme before paint to avoid a flash of the wrong theme -->
+  <script>
+    (function () {
+      var saved = localStorage.getItem("theme");
+      var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+</head>
+
+<body>
+  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+    <span class="theme-icon-light">☀︎</span>
+    <span class="theme-icon-dark">☾</span>
+  </button>
+
+  <main>
+    <header class="page-head">
+      <h1>Paper Deadlines</h1>
+      <p class="sub">
+        Top-tier CS conferences — real-time, embedded, mobile, systems, ML &amp; vision — counting down.
+        <a href="https://wonleeyoung.github.io/">← back to CV</a>
+      </p>
+    </header>
+
+    <div class="controls">
+      <input id="search" class="search" type="search" placeholder="Search conference, topic, or place…" aria-label="Search deadlines" />
+      <label class="toggle">
+        <input id="show-passed" type="checkbox" />
+        show passed
+      </label>
+    </div>
+
+    <div id="chips" class="chips" role="group" aria-label="Filter by area"></div>
+
+    <p id="summary" class="summary"></p>
+
+    <div id="list" class="list"></div>
+
+    <footer>
+      <p>
+        Conference data researched Jun 2026 · entries marked <span style="color:var(--soon)">~est</span> are
+        estimated from previous years — always confirm on the official CFP.
+      </p>
+      <p>Built with plain HTML/CSS/JS · Hosted on GitHub Pages · <a href="https://wonleeyoung.github.io/">wonleeyoung.github.io</a></p>
+    </footer>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
