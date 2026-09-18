@@ -30,8 +30,8 @@ const DAY = 86400000;
 
 /* ---------- date helpers ---------- */
 function isoParts(iso) {
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  return { y: +m[1], mo: +m[2], d: +m[3], hh: +m[4], mm: +m[5] };
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return { y: +m[1], mo: +m[2], d: +m[3] };
 }
 function fmtDate(iso) {
   const p = isoParts(iso);
@@ -40,7 +40,13 @@ function fmtDate(iso) {
 function ts(iso) { return new Date(iso).getTime(); }
 
 function isTBD(e) { return !e.paper; }
-function isPassed(e) { return e.paper && ts(e.paper) < Date.now(); }
+function expiryOf(e) {
+  if (e.paper) return ts(e.paper);
+  // A date-only deadline is certainly over only once that day has ended everywhere.
+  // This bound is for filtering/sorting; it is not a claimed submission cutoff.
+  return e.paperDate ? ts(e.paperDate + "T23:59:59.999-12:00") : NaN;
+}
+function isPassed(e) { return expiryOf(e) < Date.now(); }
 
 // next sub-deadline to hit: abstract if still ahead, else the paper deadline
 function targetOf(e) {
@@ -60,9 +66,10 @@ function ddClass(d) {
 function pad(n) { return String(n).padStart(2, "0"); }
 function gcalStamp(date) {
   return date.getUTCFullYear() + pad(date.getUTCMonth() + 1) + pad(date.getUTCDate())
-       + "T" + pad(date.getUTCHours()) + pad(date.getUTCMinutes()) + "00Z";
+       + "T" + pad(date.getUTCHours()) + pad(date.getUTCMinutes()) + pad(date.getUTCSeconds()) + "Z";
 }
 function gcalLink(e, t) {
+  if (!t.iso) return null;
   const end = new Date(t.iso);
   const start = new Date(end.getTime() - 30 * 60000);
   const params = new URLSearchParams({
@@ -89,13 +96,14 @@ function escapeHTML(s) {
 
 function cardHTML(e) {
   const tbd = isTBD(e), passed = isPassed(e);
+  const dateOnly = tbd && e.paperDate;
   const color = CATEGORY_COLOR[e.category] || "var(--muted)";
 
   let ddInner, ddCls;
-  if (tbd) {
-    ddCls = "dd-tbd"; ddInner = `<span class="num">TBD</span>`;
-  } else if (passed) {
+  if (passed) {
     ddCls = "dd-passed"; ddInner = `<span class="num">ended</span>`;
+  } else if (tbd) {
+    ddCls = "dd-tbd"; ddInner = `<span class="num">${dateOnly ? "date" : "TBD"}</span>`;
   } else {
     const t = targetOf(e), d = daysLeft(t.iso);
     ddCls = ddClass(d);
@@ -109,11 +117,16 @@ function cardHTML(e) {
     ? `<span class="kiise-badge ${e.kiise === "최우수" ? "k-top" : "k-good"}" title="한국정보과학회 등급">${escapeHTML(e.kiise)}</span>` : "";
   const est = (e.estimated && !tbd)
     ? `<span class="est-badge" title="Estimated from previous years — confirm on the official site.">~est</span>` : "";
+  const precision = dateOnly
+    ? `<span class="est-badge" title="The day is confirmed; the cutoff time and timezone are not.">Date only</span>` : "";
 
   // dates line
   let dates;
-  if (tbd) {
-    dates = `<span class="tbd-text">Deadline not announced</span>`;
+  if (dateOnly) {
+    dates = `<strong>Paper</strong> ${fmtDate(e.paperDate)}`
+      + `<span class="dot-sep">·</span><span class="tbd-text">Time / timezone unconfirmed</span>`;
+  } else if (tbd) {
+    dates = `<span class="tbd-text">Deadline not confirmed</span>`;
   } else {
     dates = `<strong>Paper</strong> ${fmtDate(e.paper)}`;
     if (e.abstract) {
@@ -124,7 +137,11 @@ function cardHTML(e) {
   }
 
   const links = [];
-  if (e.link) links.push(`<a href="${escapeHTML(e.link)}" target="_blank" rel="noopener">${tbd ? "DBLP ↗" : "CFP ↗"}</a>`);
+  if (e.link) {
+    const dblp = /^https?:\/\/(?:www\.)?dblp\.org(?:[/:?#]|$)/i.test(e.link);
+    const label = dblp ? "DBLP ↗" : (tbd ? "Official ↗" : "CFP ↗");
+    links.push(`<a href="${escapeHTML(e.link)}" target="_blank" rel="noopener">${label}</a>`);
+  }
   if (!passed && !tbd) links.push(`<a href="${gcalLink(e, targetOf(e))}" target="_blank" rel="noopener">+ Calendar</a>`);
 
   const sub = [];
@@ -138,7 +155,7 @@ function cardHTML(e) {
         <h3 class="card-name">${escapeHTML(e.name)}</h3>
         ${bk}${kiise}
         <span class="cat-tag" style="--cat:${color}">${escapeHTML(e.category)}</span>
-        ${est}
+        ${est}${precision}
       </div>
       <p class="card-full">${escapeHTML(e.full)}</p>
       <p class="card-meta">${dates}</p>
@@ -164,13 +181,13 @@ function passesFilter(e) {
 }
 
 // rank: 0 = upcoming dated, 1 = TBD, 2 = passed
-function rankOf(e) { return isTBD(e) ? 1 : (isPassed(e) ? 2 : 0); }
+function rankOf(e) { return isPassed(e) ? 2 : (isTBD(e) ? 1 : 0); }
 function sortDeadlines(a, b) {
   const ra = rankOf(a), rb = rankOf(b);
   if (ra !== rb) return ra - rb;
   if (ra === 0) return ts(targetOf(a).iso) - ts(targetOf(b).iso);   // soonest first
   if (ra === 1) return (b.bk || 0) - (a.bk || 0) || a.name.localeCompare(b.name); // TBD: by BK
-  return ts(b.paper) - ts(a.paper);                                  // passed: most recent first
+  return expiryOf(b) - expiryOf(a);                                 // passed: most recent first
 }
 
 function render() {
