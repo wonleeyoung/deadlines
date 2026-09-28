@@ -97,13 +97,14 @@ function escapeHTML(s) {
 function cardHTML(e) {
   const tbd = isTBD(e), passed = isPassed(e);
   const dateOnly = tbd && e.paperDate;
+  const rolling = tbd && e.deadlineStatus === "rolling";
   const color = CATEGORY_COLOR[e.category] || "var(--muted)";
 
   let ddInner, ddCls;
   if (passed) {
     ddCls = "dd-passed"; ddInner = `<span class="num">ended</span>`;
   } else if (tbd) {
-    ddCls = "dd-tbd"; ddInner = `<span class="num">${dateOnly ? "date" : "TBD"}</span>`;
+    ddCls = "dd-tbd"; ddInner = `<span class="num">${rolling ? "open" : dateOnly ? "date" : "TBD"}</span>`;
   } else {
     const t = targetOf(e), d = daysLeft(t.iso);
     ddCls = ddClass(d);
@@ -115,16 +116,20 @@ function cardHTML(e) {
     ? `<span class="bk-badge bk-${e.bk}" title="BK21플러스 CS IF ${e.bk} / 4">BK ${e.bk}</span>` : "";
   const kiise = e.kiise
     ? `<span class="kiise-badge ${e.kiise === "최우수" ? "k-top" : "k-good"}" title="한국정보과학회 등급">${escapeHTML(e.kiise)}</span>` : "";
-  const est = (e.estimated && !tbd)
+  const est = (e.estimated && (!tbd || dateOnly))
     ? `<span class="est-badge" title="Estimated from previous years — confirm on the official site.">~est</span>` : "";
   const precision = dateOnly
-    ? `<span class="est-badge" title="The day is confirmed; the cutoff time and timezone are not.">Date only</span>` : "";
+    ? `<span class="est-badge" title="${e.estimated ? "The day is estimated; the cutoff time and timezone are unconfirmed." : "The day is confirmed; the cutoff time and timezone are not."}">Date only</span>` : "";
 
   // dates line
   let dates;
-  if (dateOnly) {
-    dates = `<strong>Paper</strong> ${fmtDate(e.paperDate)}`
-      + `<span class="dot-sep">·</span><span class="tbd-text">Time / timezone unconfirmed</span>`;
+  if (rolling) {
+    dates = `<strong>Rolling submissions</strong><span class="dot-sep">·</span>No fixed deadline`;
+  } else if (dateOnly) {
+    dates = `<strong>${e.estimated ? "Estimated paper" : "Paper"}</strong> ${fmtDate(e.paperDate)}`;
+    const abstractDay = e.abstractDate || e.abstract;
+    if (abstractDay) dates += `<span class="dot-sep">·</span><strong>Abstract</strong> ${fmtDate(abstractDay)}`;
+    dates += `<span class="dot-sep">·</span><span class="tbd-text">Time / timezone unconfirmed</span>`;
   } else if (tbd) {
     dates = `<span class="tbd-text">Deadline not confirmed</span>`;
   } else {

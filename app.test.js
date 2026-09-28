@@ -54,6 +54,29 @@ test('unknown deadlines do not claim that an official announcement does not exis
   assert.doesNotMatch(html, /Deadline not announced|Date only|\+ Calendar/);
 });
 
+test('date-only estimates show their uncertainty without claiming a confirmed day', () => {
+  const { app } = loadApp();
+  const e = entry({ estimated: true, abstractDate: '2027-03-15', paperDate: '2027-03-22' });
+  const html = app.cardHTML(e);
+  assert.match(html, /~est/);
+  assert.match(html, /Estimated paper/);
+  assert.match(html, /Mar 22, 2027/);
+  assert.match(html, /Abstract<\/strong> Mar 15, 2027/);
+  assert.doesNotMatch(html, /The day is confirmed|D-DAY|D-\d|\+ Calendar/);
+});
+
+test('rolling submissions are shown as having no fixed deadline', () => {
+  const e = entry({ deadlineStatus: 'rolling' });
+  const { app, elements } = loadApp([e]);
+  const html = app.cardHTML(e);
+  assert.match(html, /Rolling submissions/);
+  assert.match(html, /No fixed deadline/);
+  assert.doesNotMatch(html, /Deadline not confirmed|>TBD<|D-DAY|D-\d|\+ Calendar/);
+  assert.equal(app.passesFilter(e), true);
+  app.render();
+  assert.doesNotMatch(elements.get('summary').innerHTML, /next:/);
+});
+
 test('official sources are not mislabeled as DBLP for unknown or date-only deadlines', () => {
   const { app } = loadApp();
   for (const extra of [{}, { paperDate: '2026-07-31' }]) {
